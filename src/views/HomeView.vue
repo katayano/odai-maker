@@ -107,13 +107,14 @@
         <div class="flex justify-center space-x-4">
           <button 
             @click="addToFavorites"
-            :disabled="appStore.isLoading || isAddingToFavorites"
+            :disabled="appStore.isLoading || isAddingToFavorites || appStore.isCurrentTopicFavorited"
             :class="[
               'px-4 py-2 rounded-lg transition-all duration-200 flex items-center font-medium',
               {
-                'bg-pink-500 hover:bg-pink-600 text-white hover:scale-105 hover:shadow-lg': !isAddingToFavorites && !appStore.isLoading,
+                'bg-pink-500 hover:bg-pink-600 text-white hover:scale-105 hover:shadow-lg': !isAddingToFavorites && !appStore.isLoading && !appStore.isCurrentTopicFavorited,
                 'bg-green-500 text-white scale-105 shadow-lg': isAddingToFavorites,
-                'bg-pink-300 text-white cursor-not-allowed': appStore.isLoading
+                'bg-gray-400 text-white cursor-not-allowed': appStore.isLoading || appStore.isCurrentTopicFavorited,
+                'bg-gray-500 text-white': appStore.isCurrentTopicFavorited
               }
             ]"
           >
@@ -121,7 +122,8 @@
               :class="[
                 'h-4 w-4 mr-2 transition-all duration-200',
                 {
-                  'animate-bounce fill-current': isAddingToFavorites
+                  'animate-bounce fill-current': isAddingToFavorites,
+                  'fill-current': appStore.isCurrentTopicFavorited
                 }
               ]" 
               fill="none" 
@@ -131,6 +133,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
             <span v-if="isAddingToFavorites">追加中...</span>
+            <span v-else-if="appStore.isCurrentTopicFavorited">お気に入り済み</span>
             <span v-else>お気に入りに追加</span>
           </button>
           <button 
@@ -196,6 +199,7 @@ async function addToFavorites() {
 onMounted(async () => {
   appStore.initializeSession()
   await appStore.fetchCategories()
+  await appStore.fetchFavorites() // お気に入りも初期化時に取得
 })
 </script>
 

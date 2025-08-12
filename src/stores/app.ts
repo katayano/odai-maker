@@ -32,6 +32,12 @@ export const useAppStore = defineStore('app', () => {
       : null
   )
 
+  // 現在のお題が既にお気に入りに追加されているかチェック
+  const isCurrentTopicFavorited = computed(() => {
+    if (!currentTopic.value) return false
+    return favorites.value.some(fav => fav.topicId === currentTopic.value!.id)
+  })
+
   // セッションIDの初期化
   function initializeSession() {
     // ローディング状態を明示的にリセット
@@ -118,7 +124,17 @@ export const useAppStore = defineStore('app', () => {
       }, 3000)
 
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'お気に入りの追加に失敗しました'
+      if (err instanceof Error) {
+        // APIエラーからHTTPステータスコードを取得
+        const errorStatus = (err as any).status
+        if (errorStatus === 409) {
+          error.value = err.message || 'このお題は既にお気に入りに追加されています'
+        } else {
+          error.value = err.message
+        }
+      } else {
+        error.value = 'お気に入りの追加に失敗しました'
+      }
       console.error('お気に入り追加エラー:', err)
     }
   }
@@ -165,6 +181,7 @@ export const useAppStore = defineStore('app', () => {
 
     // Computed
     selectedCategory,
+    isCurrentTopicFavorited,
 
     // Actions
     initializeSession,

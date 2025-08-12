@@ -13,7 +13,21 @@ class ApiService {
     })
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`)
+      let errorMessage = `API Error: ${response.status} ${response.statusText}`
+
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          errorMessage = errorData.error
+        }
+      } catch {
+        // JSONパースに失敗した場合はデフォルトメッセージを使用
+      }
+
+      const error = new Error(errorMessage)
+        // エラーオブジェクトにステータスコードを追加
+        ; (error as any).status = response.status
+      throw error
     }
 
     return response.json()

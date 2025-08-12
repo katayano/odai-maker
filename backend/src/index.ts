@@ -41,7 +41,7 @@ app.get('/api/topics', async (req, res) => {
   try {
     const { categoryId } = req.query
     const where = categoryId ? { categoryId: parseInt(categoryId as string) } : {}
-    
+
     const topics = await prisma.topic.findMany({
       where,
       include: {
@@ -61,16 +61,16 @@ app.get('/api/topics/random', async (req, res) => {
   try {
     const { categoryId } = req.query
     const where = categoryId ? { categoryId: parseInt(categoryId as string) } : {}
-    
+
     // お題の総数を取得
     const count = await prisma.topic.count({ where })
     if (count === 0) {
       return res.status(404).json({ error: 'お題が見つかりません' })
     }
-    
+
     // ランダムなインデックスを生成
     const randomIndex = Math.floor(Math.random() * count)
-    
+
     const randomTopic = await prisma.topic.findMany({
       where,
       skip: randomIndex,
@@ -79,7 +79,7 @@ app.get('/api/topics/random', async (req, res) => {
         category: true
       }
     })
-    
+
     res.json(randomTopic[0])
   } catch (error) {
     console.error('ランダムお題取得エラー:', error)
@@ -91,14 +91,14 @@ app.get('/api/topics/random', async (req, res) => {
 app.post('/api/history', async (req, res) => {
   try {
     const { topicId, sessionId } = req.body
-    
+
     const history = await prisma.topicHistory.create({
       data: {
         topicId: parseInt(topicId),
         sessionId: sessionId || null
       }
     })
-    
+
     res.json(history)
   } catch (error) {
     console.error('履歴追加エラー:', error)
@@ -111,25 +111,25 @@ app.get('/api/history', async (req, res) => {
   try {
     const { sessionId } = req.query
     const where = sessionId ? { sessionId: sessionId as string } : {}
-    
+
     const history = await prisma.topicHistory.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: 50 // 最新50件まで
     })
-    
+
     // お題情報も一緒に取得
     const topicIds = history.map(h => h.topicId)
     const topics = await prisma.topic.findMany({
       where: { id: { in: topicIds } },
       include: { category: true }
     })
-    
+
     const historyWithTopics = history.map(h => ({
       ...h,
       topic: topics.find(t => t.id === h.topicId)
     }))
-    
+
     res.json(historyWithTopics)
   } catch (error) {
     console.error('履歴取得エラー:', error)
@@ -141,14 +141,30 @@ app.get('/api/history', async (req, res) => {
 app.post('/api/favorites', async (req, res) => {
   try {
     const { topicId, sessionId } = req.body
-    
-    const favorite = await prisma.favorite.create({
-      data: {
-        topicId: parseInt(topicId),
+    const parsedTopicId = parseInt(topicId)
+
+    // 既に同じお題がお気に入りに追加されているかチェック
+    const existingFavorite = await prisma.favorite.findFirst({
+      where: {
+        topicId: parsedTopicId,
         sessionId: sessionId || null
       }
     })
-    
+
+    if (existingFavorite) {
+      return res.status(409).json({
+        error: 'このお題は既にお気に入りに追加されています',
+        code: 'ALREADY_FAVORITED'
+      })
+    }
+
+    const favorite = await prisma.favorite.create({
+      data: {
+        topicId: parsedTopicId,
+        sessionId: sessionId || null
+      }
+    })
+
     res.json(favorite)
   } catch (error) {
     console.error('お気に入り追加エラー:', error)
@@ -161,24 +177,24 @@ app.get('/api/favorites', async (req, res) => {
   try {
     const { sessionId } = req.query
     const where = sessionId ? { sessionId: sessionId as string } : {}
-    
+
     const favorites = await prisma.favorite.findMany({
       where,
       orderBy: { createdAt: 'desc' }
     })
-    
+
     // お題情報も一緒に取得
     const topicIds = favorites.map(f => f.topicId)
     const topics = await prisma.topic.findMany({
       where: { id: { in: topicIds } },
       include: { category: true }
     })
-    
+
     const favoritesWithTopics = favorites.map(f => ({
       ...f,
       topic: topics.find(t => t.id === f.topicId)
     }))
-    
+
     res.json(favoritesWithTopics)
   } catch (error) {
     console.error('お気に入り取得エラー:', error)
@@ -190,11 +206,11 @@ app.get('/api/favorites', async (req, res) => {
 app.delete('/api/favorites/:id', async (req, res) => {
   try {
     const { id } = req.params
-    
+
     await prisma.favorite.delete({
       where: { id: parseInt(id) }
     })
-    
+
     res.json({ message: 'お気に入りを削除しました' })
   } catch (error) {
     console.error('お気に入り削除エラー:', error)
