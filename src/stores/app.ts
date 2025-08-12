@@ -19,6 +19,9 @@ export const useAppStore = defineStore('app', () => {
   
   // エラー状態
   const error = ref<string>('')
+  
+  // 成功メッセージ状態
+  const successMessage = ref<string>('')
 
   // Computed
   const selectedCategory = computed(() => 
@@ -92,8 +95,19 @@ export const useAppStore = defineStore('app', () => {
   // お気に入りに追加
   async function addToFavorites(topicId: number) {
     try {
+      error.value = ''
+      successMessage.value = ''
       await apiService.addToFavorites(topicId, sessionId.value)
       await fetchFavorites() // お気に入りを更新
+      
+      // 成功メッセージを表示
+      successMessage.value = 'お気に入りに追加しました！'
+      
+      // 3秒後に成功メッセージをクリア
+      setTimeout(() => {
+        successMessage.value = ''
+      }, 3000)
+      
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'お気に入りの追加に失敗しました'
       console.error('お気に入り追加エラー:', err)
@@ -121,6 +135,11 @@ export const useAppStore = defineStore('app', () => {
     error.value = ''
   }
 
+  // 成功メッセージクリア
+  function clearSuccessMessage() {
+    successMessage.value = ''
+  }
+
   return {
     // State
     sessionId,
@@ -131,6 +150,7 @@ export const useAppStore = defineStore('app', () => {
     favorites,
     isLoading,
     error,
+    successMessage,
 
     // Computed
     selectedCategory,
@@ -145,5 +165,6 @@ export const useAppStore = defineStore('app', () => {
     removeFavorite,
     selectCategory,
     clearError,
+    clearSuccessMessage,
   }
 })
